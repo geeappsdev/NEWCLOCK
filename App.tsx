@@ -8,6 +8,7 @@ import { AddTimerModal } from './components/AddTimerModal';
 import { SettingsModal } from './components/SettingsModal';
 import { EventView } from './components/EventView';
 import { Notification } from './components/Notification';
+import { ApiKeyModal } from './components/ApiKeyModal';
 import { Icon } from './components/Icon';
 import { THEMES, INITIAL_SETTINGS, ALARM_SOUNDS } from './constants';
 import { fetchAndParseICal } from './services/icalService';
@@ -23,9 +24,19 @@ const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState<ActiveTab>('clock');
     const [isAddTimerModalOpen, setAddTimerModalOpen] = useState(false);
     const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
+    const [isApiKeyModalOpen, setApiKeyModalOpen] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
     const [notification, setNotification] = useState<NotificationPayload | null>(null);
     const notificationAudioRef = useRef<HTMLAudioElement>(null);
+    
+    const isAppReady = !!settings.apiKey;
+
+    useEffect(() => {
+        if (!settings.apiKey) {
+            setApiKeyModalOpen(true);
+        }
+    }, [settings.apiKey]);
+
 
     useEffect(() => {
         const root = document.documentElement;
@@ -44,7 +55,7 @@ const App: React.FC = () => {
 
     const fetchCalendars = useCallback(async () => {
         setSyncError(null);
-        if (!settings.iCalSources || settings.iCalSources.length === 0) {
+        if (!isAppReady || !settings.iCalSources || settings.iCalSources.length === 0) {
             setEvents([]);
             return;
         }
@@ -59,7 +70,7 @@ const App: React.FC = () => {
             console.error("Failed to sync calendars:", error);
             setSyncError("Failed to sync one or more calendars. Check URLs and CORS policies.");
         }
-    }, [settings.iCalSources, setEvents]);
+    }, [settings.iCalSources, setEvents, isAppReady]);
 
     useEffect(() => {
         fetchCalendars();
@@ -68,6 +79,7 @@ const App: React.FC = () => {
     useInterval(fetchCalendars, 15 * 60 * 1000); // Sync every 15 minutes
 
     useInterval(() => {
+        if (!isAppReady) return;
         const now = Date.now();
         
         // Clear old notified events (older than 1 day)
@@ -162,39 +174,53 @@ const App: React.FC = () => {
                 showDateTime={settings.showDateTimeInHeader} 
             />
             
-            <nav className="flex justify-center p-2">
-                <div className="flex items-center gap-2 bg-surface p-1.5 rounded-full animate-fade-in">
-                    <button onClick={() => setActiveTab('clock')} className={`px-4 py-1.5 text-sm font-semibold rounded-full flex items-center gap-2 ${activeTab === 'clock' ? 'bg-primary text-white' : 'hover:bg-background/50'}`}>
-                        <Icon name="clock" className="w-5 h-5" />Clock
-                    </button>
-                    <button onClick={() => setActiveTab('timers')} className={`px-4 py-1.5 text-sm font-semibold rounded-full flex items-center gap-2 ${activeTab === 'timers' ? 'bg-primary text-white' : 'hover:bg-background/50'}`}>
-                        <Icon name="timer" className="w-5 h-5" />Timers
-                    </button>
-                    <button onClick={() => setActiveTab('events')} className={`px-4 py-1.5 text-sm font-semibold rounded-full flex items-center gap-2 ${activeTab === 'events' ? 'bg-primary text-white' : 'hover:bg-background/50'}`}>
-                        <Icon name="calendar" className="w-5 h-5" />Events
-                    </button>
-                </div>
-            </nav>
+            {isAppReady ? (
+            <>
+                <nav className="flex justify-center p-2">
+                    <div className="flex items-center gap-2 bg-surface p-1.5 rounded-full animate-fade-in">
+                        <button onClick={() => setActiveTab('clock')} className={`px-4 py-1.5 text-sm font-semibold rounded-full flex items-center gap-2 ${activeTab === 'clock' ? 'bg-primary text-white' : 'hover:bg-background/50'}`}>
+                            <Icon name="clock" className="w-5 h-5" />Clock
+                        </button>
+                        <button onClick={() => setActiveTab('timers')} className={`px-4 py-1.5 text-sm font-semibold rounded-full flex items-center gap-2 ${activeTab === 'timers' ? 'bg-primary text-white' : 'hover:bg-background/50'}`}>
+                            <Icon name="timer" className="w-5 h-5" />Timers
+                        </button>
+                        <button onClick={() => setActiveTab('events')} className={`px-4 py-1.5 text-sm font-semibold rounded-full flex items-center gap-2 ${activeTab === 'events' ? 'bg-primary text-white' : 'hover:bg-background/50'}`}>
+                            <Icon name="calendar" className="w-5 h-5" />Events
+                        </button>
+                    </div>
+                </nav>
 
-            <main className="flex-1">
-                {activeTab === 'clock' && <Clock />}
+                <main className="flex-1">
+                    {activeTab === 'clock' && <Clock />}
+                    {activeTab === 'timers' && (
+                        <TimerList 
+                            timers={timers} 
+                            onAdd={() => setAddTimerModalOpen(true)} 
+                            onDelete={handleDeleteTimer} 
+                            onToggle={handleToggleTimer} 
+                            onReset={handleResetTimer} 
+                            alarmSoundUrl={alarmSoundUrl} 
+                        />
+                    )}
+                    {activeTab === 'events' && <EventView events={events} error={syncError} />}
+                </main>
+                
                 {activeTab === 'timers' && (
-                    <TimerList 
-                        timers={timers} 
-                        onAdd={() => setAddTimerModalOpen(true)} 
-                        onDelete={handleDeleteTimer} 
-                        onToggle={handleToggleTimer} 
-                        onReset={handleResetTimer} 
-                        alarmSoundUrl={alarmSoundUrl} 
-                    />
+                    <div className="fixed bottom-6 right-6 z-20">
+                        <button onClick={() => setAddTimerModalOpen(true)} className="p-4 bg-secondary text-white rounded-full shadow-lg hover:scale-105 transition-transform" aria-label="Add Timer">
+                            <Icon name="plus" className="w-7 h-7" />
+                        </button>
+                    </div>
                 )}
-                {activeTab === 'events' && <EventView events={events} error={syncError} />}
-            </main>
-            
-            {activeTab === 'timers' && (
-                <div className="fixed bottom-6 right-6 z-20">
-                    <button onClick={() => setAddTimerModalOpen(true)} className="p-4 bg-secondary text-white rounded-full shadow-lg hover:scale-105 transition-transform" aria-label="Add Timer">
-                        <Icon name="plus" className="w-7 h-7" />
+            </>
+            ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                    <Icon name="lock" className="w-16 h-16 text-primary mb-4" />
+                    <h2 className="text-2xl font-bold">Application Locked</h2>
+                    <p className="text-text-secondary mt-2">Please set your API key in the settings to unlock the app.</p>
+                     <button onClick={() => setSettingsModalOpen(true)} className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                        <Icon name="cog" className="w-5 h-5" />
+                        Go to Settings
                     </button>
                 </div>
             )}
@@ -209,6 +235,12 @@ const App: React.FC = () => {
                 onClose={() => setSettingsModalOpen(false)} 
                 settings={settings} 
                 onSettingsChange={setSettings} 
+            />
+            <ApiKeyModal
+                 isOpen={isApiKeyModalOpen} 
+                 onClose={() => setApiKeyModalOpen(false)} 
+                 settings={settings} 
+                 onSettingsChange={setSettings} 
             />
             {notification && (
                 <Notification 

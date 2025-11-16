@@ -10,6 +10,7 @@ export interface Settings {
   customAlarmSoundUrl: string;
   showDateTimeInHeader: boolean;
   iCalSources: ICalSource[];
+  apiKey: string;
 }
 
 export interface Timer {

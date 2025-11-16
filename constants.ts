@@ -24,4 +24,5 @@ export const INITIAL_SETTINGS: Settings = {
     customAlarmSoundUrl: '', 
     showDateTimeInHeader: true,
     iCalSources: [],
+    apiKey: '',
 };

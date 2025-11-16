@@ -3,6 +3,7 @@ import { Modal } from './Modal';
 import { THEMES, ALARM_SOUNDS } from '../constants';
 import type { Settings } from '../types';
 import { ManageCalendarsModal } from './ManageCalendarsModal';
+import { ApiKeyModal } from './ApiKeyModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onSettingsChange }) => {
   const [isCalendarModalOpen, setCalendarModalOpen] = useState(false);
+  const [isApiKeyModalOpen, setApiKeyModalOpen] = useState(false);
   
   return (
     <>
@@ -79,6 +81,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
           )}
 
           <div className="pt-4 mt-4 border-t border-surface">
+              <h3 className="text-md font-semibold text-text-primary">API Key</h3>
+              <p className="text-xs text-text-secondary/70 mb-4">Set your Gemini API key to use AI features.</p>
+              <button onClick={() => setApiKeyModalOpen(true)} className="w-full p-2 bg-surface text-text-primary font-semibold rounded-md hover:bg-background transition-colors">
+                  Set API Key
+              </button>
+          </div>
+
+          <div className="pt-4 mt-4 border-t border-surface">
               <h3 className="text-md font-semibold text-text-primary">Calendars</h3>
               <p className="text-xs text-text-secondary/70 mb-4">Sync iCal calendars to get event notifications.</p>
               <button onClick={() => setCalendarModalOpen(true)} className="w-full p-2 bg-surface text-text-primary font-semibold rounded-md hover:bg-background transition-colors">
@@ -90,6 +100,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
       <ManageCalendarsModal 
         isOpen={isCalendarModalOpen}
         onClose={() => setCalendarModalOpen(false)}
+        settings={settings}
+        onSettingsChange={onSettingsChange}
+      />
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setApiKeyModalOpen(false)}
         settings={settings}
         onSettingsChange={onSettingsChange}
       />
