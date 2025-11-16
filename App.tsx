@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useInterval } from './hooks/useInterval';
 import { Header } from './components/Header';
@@ -19,7 +19,7 @@ type ActiveTab = 'clock' | 'timers' | 'events';
 const App: React.FC = () => {
     const [settings, setSettings] = useLocalStorage<Settings>('geeclock-settings', INITIAL_SETTINGS);
     const [timers, setTimers] = useLocalStorage<TimerType[]>('geeclock-timers', []);
-    const [events, setEvents] = useLocalStorage<ICalEvent[]>('geeclock-events', []);
+    const [storedEvents, setStoredEvents] = useLocalStorage<ICalEvent[]>('geeclock-events', []);
     const [notifiedEventIds, setNotifiedEventIds] = useLocalStorage<Record<string, { ten?: boolean, five?: boolean, now?: boolean }>>('geeclock-notified-events', {});
     const [activeTab, setActiveTab] = useState<ActiveTab>('clock');
     const [isAddTimerModalOpen, setAddTimerModalOpen] = useState(false);
@@ -29,6 +29,12 @@ const App: React.FC = () => {
     const [notification, setNotification] = useState<NotificationPayload | null>(null);
     const notificationAudioRef = useRef<HTMLAudioElement>(null);
     
+    const events = useMemo(() => storedEvents.map(e => ({
+        ...e,
+        start: new Date(e.start),
+        end: new Date(e.end),
+    })), [storedEvents]);
+
     const isAppReady = !!settings.apiKey;
 
     useEffect(() => {
@@ -56,7 +62,7 @@ const App: React.FC = () => {
     const fetchCalendars = useCallback(async () => {
         setSyncError(null);
         if (!isAppReady || !settings.iCalSources || settings.iCalSources.length === 0) {
-            setEvents([]);
+            setStoredEvents([]);
             return;
         }
 
@@ -65,18 +71,16 @@ const App: React.FC = () => {
                 settings.iCalSources.map(source => fetchAndParseICal(source.url))
             );
             const flatEvents = allEvents.flat().sort((a, b) => a.start.getTime() - b.start.getTime());
-            setEvents(flatEvents);
+            setStoredEvents(flatEvents);
         } catch (error) {
             console.error("Failed to sync calendars:", error);
             setSyncError("Failed to sync one or more calendars. Check URLs and CORS policies.");
         }
-    }, [settings.iCalSources, setEvents, isAppReady]);
+    }, [settings.iCalSources, setStoredEvents, isAppReady]);
 
     useEffect(() => {
         fetchCalendars();
     }, [fetchCalendars]);
-
-    useInterval(fetchCalendars, 15 * 60 * 1000); // Sync every 15 minutes
 
     useInterval(() => {
         if (!isAppReady) return;
