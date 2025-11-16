@@ -1,0 +1,5 @@
+{
+  "name": "GeeClock",
+  "description": "A modern and feature-rich clock, timer, and calendar application. Keep track of your day with customizable timers, multiple themes, and iCal integration for event notifications.",
+  "requestFramePermissions": []
+}
